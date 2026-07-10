@@ -463,23 +463,40 @@ else()
                     TARGET XilEnvGui
                     OUTPUT_SCRIPT XILENV_QT_DEPLOY_SCRIPT
                     NO_UNSUPPORTED_PLATFORM_ERROR)
-                if(WIN32)
-                    # XilEnvGui.exe is installed at the package root, not in a
-                    # conventional bin/ directory. By default the Qt deploy tool
-                    # copies the Qt DLLs into <prefix>/bin (QT_DEPLOY_BIN_DIR),
-                    # so the executable at the root cannot find them once the
-                    # archive is unpacked. Override the deploy layout to place
-                    # the DLLs next to the executable and the plugins into
-                    # <root>/plugins; a matching qt.conf is generated alongside
-                    # the executable (GENERATE_QT_CONF). These variables are read
-                    # by the deploy script that runs in the next install step.
-                    install(CODE [[
-                        set(QT_DEPLOY_BIN_DIR ".")
-                        set(QT_DEPLOY_PLUGINS_DIR "plugins")
-                        set(QT_DEPLOY_TRANSLATIONS_DIR "translations")
-                    ]])
-                endif()
+
+                # XilEnvGui is installed at the package root, not in a
+                # conventional bin/ directory. The Qt deploy tool defaults to a
+                # bin/ + lib/ layout, so the executable at the root cannot find
+                # the deployed Qt runtime once the archive is unpacked. Align
+                # the deploy layout with our flat install tree so the package is
+                # self-contained:
+                #   - qt.conf sits next to the executable (QT_DEPLOY_BIN_DIR=.)
+                #   - Windows: the Qt DLLs are placed next to the executable
+                #     (windeployqt uses QT_DEPLOY_BIN_DIR as its --libdir)
+                #   - Linux: the Qt shared libs go to <root>/lib
+                #   - plugins go to <root>/plugins (the generated qt.conf points
+                #     there via GENERATE_QT_CONF)
+                # These variables are read by the deploy script run below.
+                install(CODE [[
+                    set(QT_DEPLOY_BIN_DIR ".")
+                    set(QT_DEPLOY_LIB_DIR "lib")
+                    set(QT_DEPLOY_PLUGINS_DIR "plugins")
+                    set(QT_DEPLOY_TRANSLATIONS_DIR "translations")
+                ]])
                 install(SCRIPT ${XILENV_QT_DEPLOY_SCRIPT})
+
+                if(NOT WIN32)
+                    # The generic (Linux) deploy tool copies the Qt libs into
+                    # <root>/lib but does not patch the executable's RPATH, so
+                    # point the executables at the bundled libs. Embed the RPATH
+                    # at link time (BUILD_WITH_INSTALL_RPATH) so it is present
+                    # regardless of where the build-time Qt lived - install-time
+                    # RPATH editing only works when a build RPATH already exists
+                    # (i.e. Qt outside the default linker search path).
+                    set_target_properties(XilEnvGui XilEnv PROPERTIES
+                        INSTALL_RPATH "$ORIGIN/lib"
+                        BUILD_WITH_INSTALL_RPATH TRUE)
+                endif()
             endif()
         endif()
     endif()
