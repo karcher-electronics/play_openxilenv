@@ -140,13 +140,17 @@ jobs:
         where ninja
         ninja --version
     
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4.3.0
-      with:
-        version: '6.9.2'
-        host: 'windows'
-        target: 'desktop'
-        arch: 'win64_mingw'
+    - name: Install aqtinstall
+      run: pip install aqtinstall
+
+    - name: Install Qt 6.9.2
+      shell: bash
+      run: |
+        aqt install-qt windows desktop 6.9.2 win64_mingw -O "$GITHUB_WORKSPACE/Qt"
+        QT_BASE="$GITHUB_WORKSPACE/Qt/6.9.2/mingw_64"
+        echo "$QT_BASE/bin" >> "$GITHUB_PATH"
+        echo "Qt6_DIR=$QT_BASE" >> "$GITHUB_ENV"
+        echo "CMAKE_PREFIX_PATH=$QT_BASE" >> "$GITHUB_ENV"
 
     - name: Prepare OpenXilEnv Build
       shell: cmd 

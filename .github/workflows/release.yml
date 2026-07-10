@@ -27,6 +27,11 @@ jobs:
       - name: Derive version from tag
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -86,13 +91,22 @@ jobs:
         shell: bash
         run: echo "D:/a/_temp/mingw/mingw64/bin" >> "$GITHUB_PATH"
 
-      - name: Install Qt 6.9.2
-        uses: jurplel/install-qt-action@v4.3.0
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          version: '6.9.2'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_mingw'
+          python-version: '3.11'
+
+      - name: Install aqtinstall
+        run: pip install aqtinstall
+
+      - name: Install Qt 6.9.2
+        shell: bash
+        run: |
+          aqt install-qt windows desktop 6.9.2 win64_mingw -O "$GITHUB_WORKSPACE/Qt"
+          QT_BASE="$GITHUB_WORKSPACE/Qt/6.9.2/mingw_64"
+          echo "$QT_BASE/bin" >> "$GITHUB_PATH"
+          echo "Qt6_DIR=$QT_BASE" >> "$GITHUB_ENV"
+          echo "CMAKE_PREFIX_PATH=$QT_BASE" >> "$GITHUB_ENV"
 
       - name: Configure
         shell: cmd
@@ -133,7 +147,8 @@ jobs:
           merge-multiple: true
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        # Pinned to an exact version allowed by the org action policy.
+        uses: softprops/action-gh-release@v2.2.1
         with:
           name: OpenXilEnv ${{ github.ref_name }}
           # Auto-generate the release body from merged PRs since the last tag,
