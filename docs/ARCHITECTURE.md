@@ -46,6 +46,59 @@ Both executables are compiled from the **same** set of internal libraries under
 `XilEnvGui` links the Qt GUI (`Src/GUI/Qt`), while `XilEnv` links a set of
 headless console stubs (`Src/GUI/Console`) and is compiled with `NO_GUI`.
 
+The following block diagram shows this concept at a glance: the **Scheduler**
+drives simulated time, the **Blackboard** is the central signal bus that
+everything reads from and writes to, and the software-under-test runs in a
+separate OS process connected over an IPC channel.
+
+```mermaid
+flowchart LR
+    subgraph OUT["Control &amp; observation"]
+        direction TB
+        OP["Operator<br/>(GUI)"]
+        AUT["Automation<br/>Python / C · scripts"]
+        CAL["Calibration tool<br/>(XCP)"]
+    end
+
+    subgraph HOST["XilEnv host process — XilEnvGui or XilEnv"]
+        direction TB
+        UI["User-interface layer<br/>Qt GUI · or · console (NO_GUI)"]
+        SCHED["Scheduler<br/>fixed-cycle simulated time"]
+        BB(["Blackboard<br/>central signal bus"])
+        subgraph INT["Internal processes"]
+            direction LR
+            CANS["CAN server"]
+            EQU["Equations"]
+            RAMP["Ramps"]
+            REC["Recorder"]
+            PLAY["Player"]
+            SCR["Script"]
+        end
+        UI --- SCHED
+        SCHED ==>|"runs each cycle"| INT
+        SCHED <==> BB
+        INT <--> BB
+    end
+
+    subgraph SUT["Separate OS process"]
+        EXT["Software-under-test<br/>+ XilEnvExtProc lib"]
+    end
+
+    FILES[("Stimulus &amp; recording<br/>files — text / MDF")]
+    CANBUS{{"Simulated CAN / CAN FD bus"}}
+    HIL["HiL real-time PC<br/>RemoteMaster + real CAN"]
+
+    OP --> UI
+    AUT -->|"RPC: pipe / socket"| SCHED
+    CAL -->|"XCP / Ethernet"| BB
+    BB <-->|"IPC: pipe / socket<br/>protocol v1012"| EXT
+    CANS <--> CANBUS
+    CANBUS <-.-> EXT
+    PLAY -.reads.-> FILES
+    REC -.writes.-> FILES
+    SCHED <-.->|"TCP / Ethernet<br/>(HiL option)"| HIL
+```
+
 ## Build outputs
 
 The top-level [`CMakeLists.txt`](../CMakeLists.txt) produces the following
