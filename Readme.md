@@ -41,6 +41,10 @@ An example can be found in `Samples/ExternalProcesses/ExtProc_Simple`.
 1. Install dependencies ([Windows](docs/WINDOWS_DEPENDENCIES.md) | [Linux](docs/LINUX_DEPENDENCIES.md))
 2. Build the project ([Windows](docs/WINDOWS_BUILD.md) | [Linux](docs/LINUX_BUILD.md))
 
+## Architecture
+
+For an overview of the software components and how the **XilEnvGui** and **XilEnv** executables are built up from the modules under `Src/`, including component diagrams, see the [Architecture documentation](docs/ARCHITECTURE.md).
+
 ## Setting up Your Project
 
 - [Setup an External Process](docs/EXTERNAL_PROCESS_SETUP.md)
