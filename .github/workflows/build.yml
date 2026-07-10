@@ -153,36 +153,28 @@ jobs:
         echo "CMAKE_PREFIX_PATH=$QT_BASE" >> "$GITHUB_ENV"
 
     - name: Prepare OpenXilEnv Build
-      shell: cmd 
-      run: |
-        cd D:\a\openxilenv\openxilenv
-        mkdir openxilenv-build
-        cd openxilenv-build
-        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv ..\openxilenv
+      shell: cmd
+      run: cmake -G Ninja -B %GITHUB_WORKSPACE%\openxilenv-build -S %GITHUB_WORKSPACE%\openxilenv -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\tools\OpenXilEnv
 
     - name: Build OpenXilEnv
-      shell: cmd 
-      run: |
-        cd D:\a\openxilenv\openxilenv\openxilenv-build
-        cmake --build .
-
-    - name: Install OpenXilEnv 
       shell: cmd
-      run: |
-        cd D:\a\openxilenv\openxilenv\openxilenv-build
-        cmake --install .
+      run: cmake --build %GITHUB_WORKSPACE%\openxilenv-build
+
+    - name: Install OpenXilEnv
+      shell: cmd
+      run: cmake --install %GITHUB_WORKSPACE%\openxilenv-build
 
     - name: Deploy Qt DLLs with windeployqt
       shell: pwsh
       run: |
-        cd D:\a\tools\OpenXilEnv
+        cd "$env:GITHUB_WORKSPACE\tools\OpenXilEnv"
         windeployqt.exe XilEnvGui.exe
 
-    - name: Test OpenXilEnv installation 
+    - name: Test OpenXilEnv installation
       shell: pwsh
       run: |
-        cd D:\a\openxilenv\openxilenv\openxilenv
-        $env:OPENXILENV_INSTALLATION_PATH = "D:\a\tools\OpenXilEnv"
+        cd "$env:GITHUB_WORKSPACE\openxilenv"
+        $env:OPENXILENV_INSTALLATION_PATH = "$env:GITHUB_WORKSPACE\tools\OpenXilEnv"
         python -m venv .venv
         .\.venv\Scripts\Activate.ps1
         python -m pip install --upgrade pip
@@ -194,4 +186,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: OpenXilEnv-Windows-Qt6_9_2
-        path: D:/a/tools/OpenXilEnv/**
+        path: ${{ github.workspace }}/tools/OpenXilEnv/**
