@@ -463,6 +463,22 @@ else()
                     TARGET XilEnvGui
                     OUTPUT_SCRIPT XILENV_QT_DEPLOY_SCRIPT
                     NO_UNSUPPORTED_PLATFORM_ERROR)
+                if(WIN32)
+                    # XilEnvGui.exe is installed at the package root, not in a
+                    # conventional bin/ directory. By default the Qt deploy tool
+                    # copies the Qt DLLs into <prefix>/bin (QT_DEPLOY_BIN_DIR),
+                    # so the executable at the root cannot find them once the
+                    # archive is unpacked. Override the deploy layout to place
+                    # the DLLs next to the executable and the plugins into
+                    # <root>/plugins; a matching qt.conf is generated alongside
+                    # the executable (GENERATE_QT_CONF). These variables are read
+                    # by the deploy script that runs in the next install step.
+                    install(CODE [[
+                        set(QT_DEPLOY_BIN_DIR ".")
+                        set(QT_DEPLOY_PLUGINS_DIR "plugins")
+                        set(QT_DEPLOY_TRANSLATIONS_DIR "translations")
+                    ]])
+                endif()
                 install(SCRIPT ${XILENV_QT_DEPLOY_SCRIPT})
             endif()
         endif()
