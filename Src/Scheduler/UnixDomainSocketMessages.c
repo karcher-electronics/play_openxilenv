@@ -28,7 +28,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include <signal.h>
 #include "Config.h"
 #include "ThrowError.h"
@@ -242,7 +246,7 @@ void sig_pipe_handler(void)
 
 int UnixDomainSocket_InitMessages (char *par_Prefix, int par_LogingFlag)
 {
-    signal(SIGPIPE, (__sighandler_t)sig_pipe_handler);
+    signal(SIGPIPE, (void (*)(int))sig_pipe_handler);
     if (par_LogingFlag) {
         LoggingFlag = 1;
         LoggingFile = fopen ("/tmp/softcar_unix_domain_socket_logging.txt", "wt");

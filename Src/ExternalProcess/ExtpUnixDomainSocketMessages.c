@@ -66,7 +66,7 @@ static HANDLE XilEnvInternal_ConnectToUnixDomainSocket (char *par_InstanceName, 
     }
 
     // Connect to server.
-    iResult = connect (Socket, (__CONST_SOCKADDR_ARG)&address, sizeof(address));
+    iResult = connect (Socket, (struct sockaddr *)&address, sizeof(address));
     if (iResult == SOCKET_ERROR) {
         close(Socket);
         Socket = (SOCKET)INVALID_HANDLE_VALUE;

@@ -32,8 +32,11 @@
 #else
 #include "Platform.h"
 #endif
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #define BLACKBOARD_C
 
 #include "Config.h"

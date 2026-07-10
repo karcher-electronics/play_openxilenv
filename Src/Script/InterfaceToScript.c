@@ -19,7 +19,11 @@
 #include <string.h>
 #include <ctype.h>
 #include "Platform.h"
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #ifdef _WIN32
 #include <direct.h>
 #endif

@@ -21,7 +21,11 @@
 #include <string.h>
 #include <math.h>
 #include "Platform.h"
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include "Config.h"
 #include "PrintFormatToString.h"
 #include "WindowIniHelper.h"

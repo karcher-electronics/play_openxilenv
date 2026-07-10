@@ -19,8 +19,11 @@
 #include "Platform.h"
 #include <stdlib.h>
 #include <stdio.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #include "StringMaxChar.h"
 #include "BlackboardAccess.h"
 #include "BlackboardConversion.h"

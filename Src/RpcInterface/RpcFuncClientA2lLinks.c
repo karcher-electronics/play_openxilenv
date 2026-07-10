@@ -19,7 +19,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include "Config.h"
 #include "MemZeroAndCopy.h"
 #include "PrintFormatToString.h"

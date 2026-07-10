@@ -15,8 +15,11 @@
  */
 
 
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #include "tcb.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"

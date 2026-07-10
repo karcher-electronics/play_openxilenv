@@ -43,8 +43,11 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #include "ThrowError.h"
 #include "Files.h"
 #include "StringMaxChar.h"
@@ -1035,7 +1038,7 @@ void* RemoteProcedureServerLoginThread (void* lpParam)
                             ThrowError (1, "cannot create remote procedure call thread\n");
                             return NULL;
                         }
-                        Connections[x].ThreadId = Thread;
+                        Connections[x].ThreadId = (uint32_t)(uintptr_t)Thread;   // informational id only
                         pthread_attr_destroy(&Attr);
 #endif
 
@@ -1164,7 +1167,7 @@ void* RemoteProcedureServerLoginThread (void* lpParam)
                             ThrowError (1, "cannot create remote procedure call thread\n");
                             return NULL;
                         }
-                        Connections[x].ThreadId = Thread;
+                        Connections[x].ThreadId = (uint32_t)(uintptr_t)Thread;   // informational id only
                         pthread_attr_destroy(&Attr);
                         break;
                     }

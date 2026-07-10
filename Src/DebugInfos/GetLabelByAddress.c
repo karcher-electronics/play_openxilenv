@@ -16,8 +16,11 @@
 
 
 #include "Platform.h"
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #include "RunTimeMeasurement.h"
 #include "Blackboard.h"
 #include "MyMemory.h"

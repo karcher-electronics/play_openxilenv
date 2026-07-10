@@ -19,7 +19,9 @@
 #ifdef _WIN32
 #include <ShlObj.h>
 #else
-#include <sys/io.h>
+#ifndef __APPLE__
+#include <sys/io.h>   // not available (and not needed) on macOS
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif

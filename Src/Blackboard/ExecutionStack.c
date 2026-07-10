@@ -20,7 +20,11 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #ifdef _WIN32
 #include <intrin.h>
 #else

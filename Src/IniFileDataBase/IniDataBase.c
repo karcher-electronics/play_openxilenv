@@ -18,7 +18,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>

@@ -48,8 +48,8 @@
 #include "RpcFuncLogin.h"
 #include "RpcClientSocket.h"
 
-#ifdef __linux__ 
-    //linux code goes here
+#if defined(__linux__) || defined(__APPLE__)
+    //linux/macOS code goes here
     #define THREAD_LOCAL  __thread
 #elif _WIN32
     #define RPC_PIPE_NAME  "XilEnvRemoteProcedureCall"
@@ -140,6 +140,10 @@ static int GetThreadReceiveBufferNo(void)
         } else {
             CloseHandle(ThreadHandle);
         }
+#elif defined(__APPLE__)
+        // macOS has no /proc; we cannot cheaply detect dead threads.
+        // Never reuse a slot here (a live thread's buffer must not be recycled).
+        (void)x;
 #else
         char ThreadProcFolderName[32];
         PrintFormatToString (ThreadProcFolderName, sizeof(ThreadProcFolderName), "/proc/self/%i", RpcThreadBuffers[x].ThreadId);
@@ -343,7 +347,7 @@ HANDLE UnixDomainSocketConnectToRemoteProcedureCallServer(const char *par_Server
     }
 
     // Connect to server.
-    iResult = connect (Socket, (__CONST_SOCKADDR_ARG)&address, sizeof(address));
+    iResult = connect (Socket, (struct sockaddr *)&address, sizeof(address));
     if (iResult == SOCKET_ERROR) {
         close(Socket);
         Socket = (SOCKET)INVALID_HANDLE_VALUE;

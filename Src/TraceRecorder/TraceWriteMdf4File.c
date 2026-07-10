@@ -776,7 +776,7 @@ int OpenWriteMdf4Head (START_MESSAGE_DATA hdrec_data,
     PosNextChannel = 0;
     RecordSize = 0;
     // now the measurement channels
-    for (Channel = 0; Channel < vids[Channel] > 0; Channel++) {
+    for (Channel = 0; (Channel < vids[Channel]) > 0; Channel++) {   // parenthesized to keep existing semantics (clang rejects the chained comparison)
         PosNextChannel = WriteOneChannel(*pfile, 0, vids[Channel],
                                          (dec_phys_flags != NULL) && dec_phys_flags[Channel],
                                          ConversionBuffer,

@@ -19,7 +19,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include "StringMaxChar.h"
 #include "PrintFormatToString.h"
 #include "MyMemory.h"

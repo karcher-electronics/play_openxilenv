@@ -21,8 +21,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #include "MyMemory.h"
 #include "StringMaxChar.h"
 #include "ThrowError.h"

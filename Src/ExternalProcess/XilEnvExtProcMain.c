@@ -41,6 +41,9 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#ifdef __APPLE__
+#include <crt_externs.h>   // _NSGetArgc / _NSGetArgv
+#endif
 #define MAX_PATH 1024
 #define PATH_SEPARTOR "/"
 #define _stricmp strcasecmp
@@ -68,6 +71,20 @@ static char *GetCommandLineA(void)
     int CharPos = 0;
     int BufferSize = 100;
     if (ret == NULL) {
+#ifdef __APPLE__
+        // macOS has no /proc; reconstruct the command line from argv
+        int argc = *_NSGetArgc();
+        char **argv = *_NSGetArgv();
+        size_t Len = 1;
+        for (int i = 0; i < argc; i++) Len += strlen(argv[i]) + 1;
+        ret = (char*)malloc(Len);
+        ret[0] = 0;
+        for (int i = 0; i < argc; i++) {
+            strncat(ret, argv[i], Len - strlen(ret) - 1);
+            strncat(ret, " ", Len - strlen(ret) - 1);
+        }
+        return ret;
+#else
         ret = (char*)malloc(BufferSize);
         int fd = open("/proc/self/cmdline", O_RDONLY);
         if (fd > 0) {
@@ -93,6 +110,7 @@ static char *GetCommandLineA(void)
             }
             ret[CharPos] = 0;
         }
+#endif
     }
     return ret;
 }

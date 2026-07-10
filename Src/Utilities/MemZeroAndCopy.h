@@ -53,7 +53,9 @@ inline void *ZEROMEM(void *addr, size_t size)
 }
 
 #else
-#ifdef __STDC_WANT_LIB_EXT1__
+// Note: Apple's libc defines __STDC_WANT_LIB_EXT1__ and provides memset_s, but NOT
+// memcpy_s. Fall back to the plain C functions on macOS.
+#if defined(__STDC_WANT_LIB_EXT1__) && !defined(__APPLE__)
 #define MEMSET(dst, value, size) memset_s(dst, size, value, size)
 #define MEMCPY(dst, src, size) memcpy_s(dst, size, src, size)
 #define ZEROMEM(addr, size) memset_s(addr, size, 0, size)

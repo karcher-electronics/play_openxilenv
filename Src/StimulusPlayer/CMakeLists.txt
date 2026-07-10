@@ -1,4 +1,4 @@
-if(UNIX) 
+if(UNIX AND NOT APPLE) # LinuxRemoteMasterCore is Linux-only
 target_sources(LinuxRemoteMasterCore PRIVATE 
     WriteToBlackboardPipe.c) 
 endif()

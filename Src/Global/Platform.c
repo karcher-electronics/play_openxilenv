@@ -38,7 +38,12 @@ int ThrowError (int level, const char *format, ...);
 #include <string.h>
 #include <pwd.h>
 #include <dirent.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>   // _NSGetExecutablePath
+#include <crt_externs.h>   // _NSGetArgc / _NSGetArgv
+#else
 #include <sys/auxv.h>
+#endif
 #include <sys/mman.h>
 
 void Sleep(int par_time_ms)
@@ -95,6 +100,33 @@ int sc_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, int 
     abstime.tv_nsec = (time_t)(help - (double)abstime.tv_sec);
     return pthread_cond_timedwait(cond, mutex, &abstime);
 }
+
+#ifdef __APPLE__
+// macOS has no pthread_mutex_timedlock; emulate it by polling pthread_mutex_trylock
+// until the absolute deadline is reached. Returns 0 on success or ETIMEDOUT on timeout.
+int sc_pthread_mutex_timedlock(pthread_mutex_t *mutex, const struct timespec *abs_timeout)
+{
+    for (;;) {
+        int rc = pthread_mutex_trylock(mutex);
+        if (rc == 0) {
+            return 0;
+        }
+        if (rc != EBUSY) {
+            return rc;
+        }
+        struct timespec now;
+        clock_gettime(CLOCK_REALTIME, &now);
+        if ((now.tv_sec > abs_timeout->tv_sec) ||
+            ((now.tv_sec == abs_timeout->tv_sec) && (now.tv_nsec >= abs_timeout->tv_nsec))) {
+            return ETIMEDOUT;
+        }
+        struct timespec sleeptime;
+        sleeptime.tv_sec = 0;
+        sleeptime.tv_nsec = 1000000;   // poll every 1 ms
+        nanosleep(&sleeptime, NULL);
+    }
+}
+#endif
 
 HANDLE CreateFile(const char *Filename, DWORD dwDesiredAccess, DWORD dwSharedMode, void *lpSecurityAttributes, DWORD dwCreatoionDisposition,
                   DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
@@ -180,10 +212,22 @@ void GetXilEnvHomeDirectory(char *ret_Directory, int par_Maxc)
 int GetModuleFileName(void *hModule, char *lpFilename, int nSize)
 {
     UNUSED(hModule);
+#ifdef __APPLE__
+    char RawPath[PATH_MAX];
+    uint32_t RawSize = sizeof(RawPath);
+    char *Path;
+    if (_NSGetExecutablePath(RawPath, &RawSize) == 0) {
+        Path = realpath(RawPath, NULL);
+        if (Path == NULL) Path = RawPath;
+    } else {
+        Path = "unknown";
+    }
+#else
     char *Path = (char*)getauxval(AT_EXECFN);
     if (Path == NULL) Path = "unknown";
     else Path = realpath(Path, NULL);
     if (Path == NULL) Path = "unknown";
+#endif
 
     if (((int)strlen(Path) + 1) >= nSize) {
         strncpy(lpFilename, Path, nSize);
@@ -269,6 +313,20 @@ char *GetCommandLine(void)
     int CharPos = 0;
     int BufferSize = 100;
     if (ret == NULL) {
+#ifdef __APPLE__
+        // macOS has no /proc; reconstruct the command line from argv (skipping argv[0])
+        int argc = *_NSGetArgc();
+        char **argv = *_NSGetArgv();
+        size_t Len = 1;
+        for (int i = 1; i < argc; i++) Len += strlen(argv[i]) + 1;
+        ret = malloc(Len);
+        ret[0] = 0;
+        for (int i = 1; i < argc; i++) {
+            if (i > 1) strncat(ret, " ", Len - strlen(ret) - 1);
+            strncat(ret, argv[i], Len - strlen(ret) - 1);
+        }
+        return ret;
+#else
         ret = malloc(BufferSize);
         int fd = open("/proc/self/cmdline", O_RDONLY);
         if (fd > 0) {
@@ -299,6 +357,7 @@ char *GetCommandLine(void)
             }
             ret[CharPos] = 0;
         }
+#endif
     }
     return ret;
 }

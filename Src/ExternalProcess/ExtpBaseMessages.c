@@ -72,7 +72,7 @@
 #define ENVIRONMENT_VARNAME_CALLFROM    "ExternalProcess_CallFrom"
 #define ENVIRONMENT_VARNAME_INSTANCE    "ExternalProcess_Instance"
 
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 int get_image_base_and_size (unsigned long *ret_base_address, unsigned long *ret_size);
 
 int XilEnvInternal_TryAndCatchWriteToMemCopy (void *Dst, void *Src, int Size);

@@ -310,7 +310,9 @@ else()
         target_link_libraries(${XilEnvExtProcTargetName} PRIVATE Ws2_32)
     endif()
 
-    if(UNIX)
+    # The RemoteMaster (HiL/RT) targets are Linux-only: they need librt, SocketCAN
+    # and RT scheduling which do not exist on macOS. Exclude them on Apple platforms.
+    if(UNIX AND NOT APPLE)
         if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
 
             #

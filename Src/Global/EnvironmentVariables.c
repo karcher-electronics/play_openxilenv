@@ -22,6 +22,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>   // _NSGetExecutablePath
+#endif
 #include "Config.h"
 #include "PrintFormatToString.h"
 #include "Scheduler.h"
@@ -299,6 +302,11 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 SolvedEnvVarsCounter++;
 #ifdef _WIN32
                 Size = GetModuleFileName (GetModuleHandle(NULL), EnvVarValue, sizeof (EnvVarValue));
+#elif defined(__APPLE__)
+                {
+                    uint32_t ApSize = sizeof(EnvVarValue);
+                    Size = (_NSGetExecutablePath(EnvVarValue, &ApSize) == 0) ? (int)strlen(EnvVarValue) : 0;
+                }
 #else
                 Size = readlink("/proc/self/exe", EnvVarValue, sizeof (EnvVarValue));
 #endif

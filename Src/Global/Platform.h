@@ -43,7 +43,7 @@ typedef HANDLE MY_FILE_HANDLE;
 
 #define NULL_INT_OR_PTR  NULL
 
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
 #define EXTP_CONFIG_HAVE_DOUBLE
 #define EXTP_CONFIG_HAVE_KILL_EVENT
 #define EXTP_CONFIG_HAVE_COMMANDLINE
@@ -57,13 +57,21 @@ typedef HANDLE MY_FILE_HANDLE;
 #include <ctype.h>
 #include <limits.h>
 #include <pthread.h>
+#ifdef __APPLE__
+#include "ElfCompat.h"    // macOS uses Mach-O and has no system <elf.h>; provide the ELF subset we need
+#else
 #include <elf.h>
+#endif
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <stdlib.h>       // alloca() is declared here on macOS (no <alloca.h>)
+#else
 #include <alloca.h>
+#endif
 #include <errno.h>
 
 #define MAX_PATH   260
@@ -150,7 +158,12 @@ typedef struct {
 #define BELOW_NORMAL_PRIORITY_CLASS    -1
 #define IDLE_PRIORITY_CLASS           -15
 
+#ifdef __APPLE__
+// macOS has no gettid syscall; use the Mach thread port as a unique per-thread id
+#define GetCurrentThreadId() ((DWORD)pthread_mach_thread_np(pthread_self()))
+#else
 #define GetCurrentThreadId() ((DWORD)syscall(__NR_gettid))
+#endif
 
 #define _isnan(v) isnan(v)
 #define _access(f,x) access(f,x)
@@ -181,6 +194,15 @@ int SetEnvironmentVariable(const char *EnvVarName,
 
 
 int sc_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, int time_ms);
+
+#ifdef __APPLE__
+// macOS lacks pthread_mutex_timedlock and pthread_setschedprio.
+// Provide a polling-based timedlock and treat the priority change as best-effort (no-op).
+int sc_pthread_mutex_timedlock(pthread_mutex_t *mutex, const struct timespec *abs_timeout);
+#define pthread_mutex_timedlock(mutex, abs_timeout) sc_pthread_mutex_timedlock((mutex), (abs_timeout))
+static inline int sc_pthread_setschedprio_noop(pthread_t thread, int prio) { (void)thread; (void)prio; return 0; }
+#define pthread_setschedprio(thread, prio) sc_pthread_setschedprio_noop((thread), (prio))
+#endif
 
 
 HANDLE CreateFile(const char *Filename, DWORD dwDesiredAccess, DWORD dwSharedMode, void *lpSecurityAttributes, DWORD dwCreatoionDisposition,
@@ -276,7 +298,7 @@ extern int errno;
 extern "C" {
 #endif
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #define IMAGE_DOS_SIGNATURE                 0x5A4D      // MZ
 #define IMAGE_NT_SIGNATURE                  0x00004550  // PE00
 

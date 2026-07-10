@@ -25,6 +25,10 @@
 #if defined(_WIN32) && !defined(__GNUC__)
 #define MAP2MYSEC_BEFORE __declspec(allocate("mysec"))
 #define MAP2MYSEC_BEHIND
+#elif defined(__APPLE__)
+// Mach-O section names must be "segment,section"
+#define MAP2MYSEC_BEFORE
+#define MAP2MYSEC_BEHIND __attribute__((section("__DATA,mysec")))
 #else
 #define MAP2MYSEC_BEFORE
 #define MAP2MYSEC_BEHIND __attribute__((section("mysec")))

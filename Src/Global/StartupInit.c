@@ -16,9 +16,12 @@
 
 
 #include "Platform.h"
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
 //#include <dlfcn.h>
 #include <sys/auxv.h>
+#endif
+#ifdef __APPLE__
+#include <mach-o/dyld.h>   // _NSGetExecutablePath
 #endif
 #include <string.h>
 
@@ -187,6 +190,12 @@ int StartupInit (void * par_Application)
 #ifdef _WIN32
             char Path[MAX_PATH];
             GetModuleFileName (GetModuleHandle(NULL), Path, sizeof (Path));
+#elif defined(__APPLE__)
+            char PathBuf[1024];
+            char *Path;
+            uint32_t ApSize = sizeof(PathBuf);
+            if (_NSGetExecutablePath(PathBuf, &ApSize) == 0) Path = PathBuf;
+            else Path = "unknown";
 #else
             char *Path;
             /*void *handle;

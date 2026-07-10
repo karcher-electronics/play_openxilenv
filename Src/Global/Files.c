@@ -24,8 +24,11 @@
 #include <stdarg.h>
 #include <time.h>
 #include <ctype.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #include "Config.h"
 #include "Scheduler.h"
 #include "BlackboardAccess.h"

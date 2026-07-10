@@ -18,7 +18,11 @@
 #include <string.h>
 #include "XilEnvExtProc.h"
 #include "Platform.h"
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include "ExtpMemoryAllocation.h"
 
 

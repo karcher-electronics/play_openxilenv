@@ -19,8 +19,11 @@
 #include "Platform.h"
 #include <stdlib.h>
 #include <stdio.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 #include "A2LBuffer.h"
 #include "A2LTokenizer.h"
 #include "A2LParser.h"

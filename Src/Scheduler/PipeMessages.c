@@ -17,7 +17,11 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include <stdio.h>
 #include "config.h"
 #include "StringMaxChar.h"

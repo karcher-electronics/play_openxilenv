@@ -22,7 +22,7 @@
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "Scheduler.h"
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include <time.h>
 #include "MemZeroAndCopy.h"
 #endif
@@ -47,7 +47,7 @@ static struct {
 
 void CyclicTimeProcess (void)
 {
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
     time_t SystemTime;
     struct tm LocalTime;
     struct tm *LocalTimePtr;

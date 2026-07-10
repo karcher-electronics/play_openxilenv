@@ -17,8 +17,11 @@
 
 #include "Platform.h"
 #include <stdio.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
-
+#endif
 extern "C" {
 #include "Config.h"
 #include "MyMemory.h"

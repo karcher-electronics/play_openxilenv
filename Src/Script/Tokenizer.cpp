@@ -17,7 +17,11 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#if defined(__APPLE__)
+#include <stdlib.h>  // do not use MyMemory.h
+#else
 #include <malloc.h>  // do not use MyMemory.h
+#endif
 extern "C" {
 #include "Files.h"
 #include "EnvironmentVariables.h"

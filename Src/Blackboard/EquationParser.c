@@ -22,7 +22,11 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include <stdarg.h>
 #ifndef _WIN32
 #include <dirent.h>

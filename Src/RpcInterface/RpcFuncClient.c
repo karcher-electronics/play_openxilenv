@@ -18,7 +18,11 @@
 
 #include "Platform.h"
 #include <stdio.h>
+#if defined(__APPLE__)
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include "Config.h"
 #include "CanFifo.h"
 
@@ -38,8 +42,8 @@
 #include "MemZeroAndCopy.h"
 #include "StringMaxChar.h"
 
-#ifdef __linux__ 
-    //linux code goes here
+#if defined(__linux__) || defined(__APPLE__)
+    //linux/macOS code goes here
     #define ALLOCA(size) alloca(size)
     #define FREEA(size) 
     #define THREAD_LOCAL  __thread
