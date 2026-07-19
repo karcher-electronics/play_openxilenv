@@ -47,10 +47,10 @@ static void* XilEnvInternal_KillExternProcessThreadFunction(void* lpParam)
     PrintFormatToString (EventName, sizeof(EventName), KILL_ALL_EXTERN_PROCESS_EVENT "_%s", (char*)lpParam);   // The name can have a "Global\" or "Local\" prefix to explicitly create the object in the global or session namespace
 #ifdef _WIN32
     hEvent = CreateEvent (NULL, TRUE, FALSE, EventName);
-    if (hEvent == NULL) {        
+    if (hEvent == NULL) {
         char *lpMsgBuf;
-        DWORD dw = GetLastError(); 
-        FormatMessage (FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+        DWORD dw = GetLastError();
+        FormatMessage (FORMAT_MESSAGE_ALLOCATE_BUFFER |
                         FORMAT_MESSAGE_FROM_SYSTEM |
                         FORMAT_MESSAGE_IGNORE_INSERTS,
                         NULL,
@@ -64,9 +64,11 @@ static void* XilEnvInternal_KillExternProcessThreadFunction(void* lpParam)
     // Wait on the kill event
     WaitForSingleObject (hEvent, INFINITE);
 #else
-    KillAllExternProcessSemaphore = sem_open(EventName, O_RDWR | O_CREAT, 0777, 0);
-    if (KillAllExternProcessSemaphore == NULL) {
-        ThrowError(1, "sem_open (\"%s\") get error %i, %s", EventName, errno, strerror(errno));
+    char SemName[MAX_PATH];
+    XilEnvBuildPosixSemName(SemName, sizeof(SemName), EventName);
+    KillAllExternProcessSemaphore = sem_open(SemName, O_RDWR | O_CREAT, 0777, 0);
+    if (KillAllExternProcessSemaphore == SEM_FAILED) {
+        ThrowError(1, "sem_open (\"%s\") get error %i, %s", SemName, errno, strerror(errno));
         return 0;
     }
     sem_wait(KillAllExternProcessSemaphore);
@@ -87,20 +89,20 @@ int XilEnvInternal_StartKillEventThread (char *par_Prefix)
 
 #ifdef _WIN32
     HANDLE hThread;
-    DWORD dwThreadId = 0; 
+    DWORD dwThreadId = 0;
 
-    hThread = CreateThread ( 
-            NULL,              // no security attribute 
-            0,                 // default stack size 
+    hThread = CreateThread (
+            NULL,              // no security attribute
+            0,                 // default stack size
             XilEnvInternal_KillExternProcessThreadFunction,    // thread proc
-            (void*)PrefixBuffer,    // thread parameter 
-            0,                 // not suspended 
-            &dwThreadId);      // returns thread ID 
+            (void*)PrefixBuffer,    // thread parameter
+            0,                 // not suspended
+            &dwThreadId);      // returns thread ID
 
     if (hThread == NULL)  {
         char *lpMsgBuf;
-        DWORD dw = GetLastError(); 
-        FormatMessage (FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+        DWORD dw = GetLastError();
+        FormatMessage (FORMAT_MESSAGE_ALLOCATE_BUFFER |
                        FORMAT_MESSAGE_FROM_SYSTEM |
                        FORMAT_MESSAGE_IGNORE_INSERTS,
                        NULL,

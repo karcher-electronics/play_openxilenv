@@ -25,6 +25,31 @@
 
 #define PIPE_MESSAGE_BUFSIZE (1024*1024)
 
+#ifndef _WIN32
+#include <stdio.h>
+// Build a valid POSIX named-semaphore name from an arbitrary logical object name.
+// POSIX names must start with a slash. On macOS they are additionally limited to
+// PSEMNAMLEN (31) characters and must not contain further slashes/backslashes, so
+// the logical name is mapped to a short, deterministic name via a 32-bit FNV-1a
+// hash. The mapping is identical on every side (scheduler and extern processes),
+// so both derive the same semaphore for the same logical name. On other POSIX
+// systems (e.g. Linux) the logical name is kept unchanged.
+static inline void XilEnvBuildPosixSemName(char *par_Dst, size_t par_DstSize, const char *par_LogicalName)
+{
+#ifdef __APPLE__
+    uint32_t Hash = 2166136261u;
+    const char *Char;
+    for (Char = par_LogicalName; *Char != '\0'; Char++) {
+        Hash ^= (uint32_t)(unsigned char)*Char;
+        Hash *= 16777619u;
+    }
+    snprintf(par_Dst, par_DstSize, "/xilenv_%08x", Hash);
+#else
+    snprintf(par_Dst, par_DstSize, "%s", par_LogicalName);
+#endif
+}
+#endif
+
 #define EXTERN_PROCESS_COMUNICATION_PROTOCOL_VERSION    1012
 
 #if defined _M_X64 || defined __linux__

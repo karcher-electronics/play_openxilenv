@@ -23,6 +23,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <semaphore.h>
+#include <errno.h>
+#include <string.h>
 #endif
 
 #include "ThrowError.h"
@@ -38,9 +40,6 @@ static sem_t *KillAllExternProcessSemaphore;
 
 int InitKillAllExternProcesses (char *par_Prefix)
 {
-#ifndef _WIN32
-    int SemValue;
-#endif
     char EventName[MAX_PATH];
 
     PrintFormatToString (EventName, sizeof(EventName), KILL_ALL_EXTERN_PROCESS_EVENT "_%s", par_Prefix);   // The name can have a "Global\" or "Local\" prefix to explicitly create the object in the global or session namespace
@@ -62,14 +61,19 @@ int InitKillAllExternProcesses (char *par_Prefix)
         return -1;
     }
 #else
-    KillAllExternProcessSemaphore = sem_open(EventName, O_CREAT, 0777, 0);
-    sem_getvalue(KillAllExternProcessSemaphore, &SemValue);
-    if (KillAllExternProcessSemaphore == NULL) ThrowError (1, "cannot create semaphore %s", EventName);
-    // Semaphore 0 setzen
-    else do {
-        sem_trywait(KillAllExternProcessSemaphore);
-        sem_getvalue(KillAllExternProcessSemaphore, &SemValue);
-    } while (SemValue != 0);
+    char SemName[MAX_PATH];
+    XilEnvBuildPosixSemName(SemName, sizeof(SemName), EventName);
+    KillAllExternProcessSemaphore = sem_open(SemName, O_CREAT, 0777, 0);
+    if (KillAllExternProcessSemaphore == SEM_FAILED) {
+        ThrowError (1, "cannot create semaphore %s (%i, %s)", SemName, errno, strerror(errno));
+        return -1;
+    }
+    // Drain the semaphore down to 0. sem_getvalue() is not implemented on all
+    // POSIX platforms (e.g. macOS returns ENOSYS), so sem_trywait() is used to
+    // remove every pending token until none is left.
+    while (sem_trywait(KillAllExternProcessSemaphore) == 0) {
+        ;
+    }
 #endif
     return 0;
 }
@@ -80,13 +84,15 @@ void KillAllExternProcesses (void)
 #ifdef _WIN32
     PulseEvent (hEvent);
 #else
-    int SemValue;
+    // Emulate a Windows PulseEvent: release every extern process currently
+    // waiting on the semaphore, then leave the semaphore at 0.
+    // sem_getvalue() is not implemented on all POSIX platforms (e.g. macOS
+    // returns ENOSYS), so sem_trywait() is used both to detect that a post was
+    // not consumed by a waiter and to remove that leftover post.
     do {
         sem_post(KillAllExternProcessSemaphore);
-        usleep(10*1000);  // 10ms warten
-        sem_getvalue(KillAllExternProcessSemaphore, &SemValue);
-    } while (SemValue == 0);
-    sem_trywait(KillAllExternProcessSemaphore);
+        usleep(10*1000);  // give a waiting extern process 10ms to consume the post
+    } while (sem_trywait(KillAllExternProcessSemaphore) != 0);
 #endif
 
 }
