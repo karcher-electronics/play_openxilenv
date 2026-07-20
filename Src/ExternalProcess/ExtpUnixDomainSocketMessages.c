@@ -65,6 +65,16 @@ static HANDLE XilEnvInternal_ConnectToUnixDomainSocket (char *par_InstanceName, 
         return INVALID_HANDLE_VALUE;
     }
 
+#ifdef __APPLE__
+    // macOS does not support the MSG_NOSIGNAL send() flag. Set SO_NOSIGPIPE on the
+    // socket so a broken connection returns EPIPE instead of raising SIGPIPE and
+    // terminating the extern process.
+    {
+        int NoSigPipe = 1;
+        setsockopt(Socket, SOL_SOCKET, SO_NOSIGPIPE, &NoSigPipe, sizeof(NoSigPipe));
+    }
+#endif
+
     // Connect to server.
     iResult = connect (Socket, (struct sockaddr *)&address, sizeof(address));
     if (iResult == SOCKET_ERROR) {

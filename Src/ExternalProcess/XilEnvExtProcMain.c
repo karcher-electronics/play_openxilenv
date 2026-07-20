@@ -293,9 +293,18 @@ STUB_OUT:
                                 0, NULL);
 #else
             if (sizeof(void*) == 8) {
+#ifdef __APPLE__
+                // macOS shared libraries use the .dylib suffix (Mach-O), not .so
+                XilEnvInternal_Strcat(DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "libXilEnvExtProc64.dylib");
+#else
                 XilEnvInternal_Strcat(DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "libXilEnvExtProc64.so");
+#endif
             }  else {
+#ifdef __APPLE__
+                XilEnvInternal_Strcat(DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "Bin32/libXilEnvExtProc32.dylib");
+#else
                 XilEnvInternal_Strcat(DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "Bin32/libXilEnvExtProc32.so");
+#endif
             }
             DllFunctionCache.SharedLibHandle = dlopen(DllFunctionCache.DllNameWithPath, RTLD_LAZY); // RTLD_NOW | RTLD_GLOBAL);
             if (DllFunctionCache.SharedLibHandle == NULL) {

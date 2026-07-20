@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.19)
 
 project(XilEnvGui VERSION 10.0 LANGUAGES C CXX)
 
+include(GNUInstallDirs)
+
 option(BUILD_ONLY_EXAMPLES "Build only examples" OFF)
 
 option(BUILD_32BIT "Build 32 bit target (only librarys and/or examples)" OFF)
@@ -48,7 +50,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 message("Target cpu architecture byte size")
 message(${MY_CMAKE_SIZEOF_VOID_P})
 message("Target compiler")
-message(${CMAKE_C_COMPILER}) 
+message(${CMAKE_C_COMPILER})
 
 if(BUILD_ONLY_EXAMPLES)
     add_subdirectory(Samples)
@@ -224,7 +226,7 @@ else()
         #
 
         add_library(XilEnvRpc SHARED)
-        set_target_properties(XilEnvRpc PROPERTIES PUBLIC_HEADER 
+        set_target_properties(XilEnvRpc PROPERTIES PUBLIC_HEADER
             ./Src/RpcInterface/XilEnvRpc.h
         )
 
@@ -264,10 +266,12 @@ else()
 
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
         set(XilEnvExtProcTargetName XilEnvExtProc64)
-        set(XilEnvExtProcLibPath "")
+        set(XilEnvExtProcRuntimeDir "${CMAKE_INSTALL_BINDIR}")
+        set(XilEnvExtProcLibraryDir "${CMAKE_INSTALL_LIBDIR}")
     else()
         set(XilEnvExtProcTargetName XilEnvExtProc32)
-        set(XilEnvExtProcLibPath "/Bin32")
+        set(XilEnvExtProcRuntimeDir "Bin32")
+        set(XilEnvExtProcLibraryDir "Bin32")
     endif()
 
     add_library(${XilEnvExtProcTargetName} SHARED)
@@ -376,10 +380,10 @@ else()
             target_link_libraries(LinuxRemoteMaster.Out PRIVATE m)
 
             install(TARGETS LinuxRemoteMaster.Out LinuxRemoteMaster LinuxRemoteMasterCore
-                RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
-                LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
-                PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
+                RUNTIME DESTINATION rt_linux
+                LIBRARY DESTINATION rt_linux
+                ARCHIVE DESTINATION rt_linux
+                PUBLIC_HEADER DESTINATION rt_linux
             )
         endif()
     endif()   # if(UNIX)
@@ -392,31 +396,31 @@ else()
 
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
         install(TARGETS XilEnvGui XilEnv XilEnvRpc
-            RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}
-            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         )
     endif()
 
     install(TARGETS ${XilEnvExtProcTargetName}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+        RUNTIME DESTINATION ${XilEnvExtProcRuntimeDir}
+        LIBRARY DESTINATION ${XilEnvExtProcLibraryDir}
+        ARCHIVE DESTINATION ${XilEnvExtProcLibraryDir}
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 
     # copy additional none *.h files to the include folder
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
-        INSTALL(FILES 
+        INSTALL(FILES
             ./Src/ExternalProcess/XilEnvExtProcMain.c
-            ./Src/ExternalProcess/XilEnvExtProcInterfaceMethods.c 
+            ./Src/ExternalProcess/XilEnvExtProcInterfaceMethods.c
             ./Src/ExternalProcess/XilEnvExtProcCan.h
-            DESTINATION  ${CMAKE_INSTALL_PREFIX}/include
+            DESTINATION  ${CMAKE_INSTALL_INCLUDEDIR}
         )
         INSTALL(FILES
             ./Userguide/OpenXiL_Userguide.pdf
-            DESTINATION  ${CMAKE_INSTALL_PREFIX}
+            DESTINATION  ${CMAKE_INSTALL_DOCDIR}
         )
 	else()
 		# copy the 32-bit mingw dlls into the Bin32 folder
@@ -424,7 +428,7 @@ else()
 		message("C_COMPILER_PATH")
 		message(${C_COMPILER_PATH})
 		INSTALL(DIRECTORY "${C_COMPILER_PATH}/"
-			DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
+			DESTINATION ${XilEnvExtProcRuntimeDir}
 			FILES_MATCHING PATTERN "*.dll")
     endif()
 

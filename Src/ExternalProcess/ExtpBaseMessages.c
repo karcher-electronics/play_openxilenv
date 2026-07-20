@@ -161,7 +161,7 @@ int get_process_identifier (void)
             }
         }
     }
-    if (c == 1) 
+    if (c == 1)
 #endif
         if (ProcessInfos.TasksInfos[0] != NULL) {
             return ProcessInfos.TasksInfos[0]->sc_process_identifier;
@@ -184,7 +184,7 @@ EXPORT_OR_IMPORT unsigned long long __FUNC_CALL_CONVETION__ get_scheduler_cycle_
             }
         }
     }
-    if (c == 1) 
+    if (c == 1)
 #endif
         if (ProcessInfos.TasksInfos[0] != NULL) {
             return ProcessInfos.TasksInfos[0]->CycleCount;
@@ -207,7 +207,7 @@ EXPORT_OR_IMPORT int  __FUNC_CALL_CONVETION__ get_cycle_period(void)
             }
         }
     }
-    if (c == 1) 
+    if (c == 1)
 #endif
     	if (ProcessInfos.TasksInfos[0] != NULL) {
             return (int)(ProcessInfos.TasksInfos[0]->CycleCount - ProcessInfos.TasksInfos[0]->LastCycleCount);
@@ -448,7 +448,7 @@ static HANDLE XilEnvInternal_ConnectToAndLogin (EXTERN_PROCESS_TASK_INFOS_STRUCT
 
 #ifdef _WIN32
     LoginMessage.ProcessId = GetCurrentProcessId ();
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
     LoginMessage.ProcessId = (uint32_t)getpid();
 #else
     LoginMessage.ProcessId = 0x1234;
@@ -641,7 +641,7 @@ void ConverFloatToDouble(union DOUBLE_UNION *Ret, float In)
 
     Ret->ui = double_bits;
 }
-#else 
+#else
 #define ConverFloatToDouble(Ret, In) ((*Ret.d) = In)
 #endif
 
@@ -727,7 +727,7 @@ int XilEnvInternal_PipeAddBlackboardVariableAllInfos (EXTERN_PROCESS_TASK_INFOS_
                                        (LPVOID)&Ack,
                                        (DWORD)sizeof (Ack),
                                        &BytesRead);
-    
+
     if (!Status || (BytesRead != sizeof (Ack))) {
         XilEnvInternal_ThrowError (TaskInfo, 1, "cannot add blackboard variable %i or %i != %i\n",  Status, BytesRead, sizeof (Ack));
     }
@@ -1370,7 +1370,7 @@ int PipeReferenceVariableCmdMessage (EXTERN_PROCESS_TASK_INFOS_STRUCT *TaskInfos
         pReferenceVariableCmdMessageAck->ReturnValue = -1;
     }
     if (pReferenceVariableCmdMessageAck->ReturnValue == 0) {
-        pReferenceVariableCmdMessageAck->ReturnValue = 
+        pReferenceVariableCmdMessageAck->ReturnValue =
             XilEnvInternal_ReferenceVariable ((void*)pReferenceVariableCmdMessage->Address, pReferenceVariableCmdMessage->Name,
                                                pReferenceVariableCmdMessage->Type, pReferenceVariableCmdMessage->Dir);
     }
@@ -2142,7 +2142,7 @@ static EXTERN_PROCESS_TASK_INFOS_STRUCT *BuildAndAddNewTaskInfoStruct (const cha
     {
         pthread_mutexattr_t Attr;
         pthread_mutexattr_init(&Attr);
-        pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE); 
+        pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
         pthread_mutex_init(&NewTaskInfo->TaskMutex, &Attr);
         pthread_mutex_init(&NewTaskInfo->XcpMutex, &Attr);
     }
@@ -2168,17 +2168,17 @@ static char **BuildParameterArray(const char *par_StartExePath, const char *par_
     int TotalLen = strlen(par_StartExePath) + 1 + strlen(par_ParameterString) + 1;
     char *Buffer = XilEnvInternal_malloc(TotalLen);
     char *p;
-    
+
     // Build the command string
     StringCopyMaxCharTruncate(Buffer, par_StartExePath, TotalLen);
     StringAppendMaxCharTruncate(Buffer, " ", TotalLen);
     StringAppendMaxCharTruncate(Buffer, par_ParameterString, TotalLen);
-    
+
     // First element is the program name
     Ret = XilEnvInternal_malloc(sizeof(char*) * 2);  // At least prog name + NULL
     Ret[0] = (char*)par_StartExePath;
     Pos = 1;
-    
+
     // Parse additional parameters
     p = Buffer + strlen(par_StartExePath);
     while (*p != 0) {
@@ -2253,7 +2253,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
                                      &DontBreakOutOfJob, &NoGui, &Err2Msg, &NoXcp, ProcessInfos.WriteBackExeToDir, sizeof(ProcessInfos.WriteBackExeToDir));
 #endif
         if (!ProcessInfos.UserSetExecutableName) {
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
              GetModuleFileName (NULL, ProcessInfos.ExecutableName, sizeof (ProcessInfos.ExecutableName));
 #endif
         }
@@ -2274,7 +2274,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
         } else {
 #ifdef _WIN32
             IsRunning = XilEnvInternal_IsPipeInstanceIsRunning(InstanceName, ServerName, 500);
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
             IsRunning = XilEnvInternal_IsUnixDomainSocketInstanceIsRunning(InstanceName, ServerName, 500);
 #else
             IsRunning = 0;
