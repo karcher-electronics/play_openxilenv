@@ -23,6 +23,8 @@
 
 #include <QRadioButton>
 #include <QButtonGroup>
+#include <QPushButton>
+#include <QColor>
 
 class ButtonDialogFrame : public CustomDialogFrame
 {
@@ -34,11 +36,24 @@ public:
     virtual void userAccept() Q_DECL_OVERRIDE;
     virtual void userReject() Q_DECL_OVERRIDE;
 
+private slots:
+    void SelectColorOn();
+    void SelectColorOff();
+
 private:
+    void UpdateColorButton(QPushButton *par_Button, const QColor &par_Color);
+    bool OpenColorDialog(QColor *ptr_Color);
+
     ButtonWidget *m_Button;
     QRadioButton *m_SchalterRadio;
     QRadioButton *m_TasterRadio;
     QButtonGroup *m_Group;
+    QPushButton *m_ColorOnButton;
+    QPushButton *m_ColorOffButton;
+
+    // Edited locally and only handed over to the widget on accept.
+    QColor m_ColorOn;
+    QColor m_ColorOff;
 };
 
 #endif // BUTTONDIALOGFRAME_H

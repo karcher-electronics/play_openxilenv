@@ -25,7 +25,7 @@ ButtonType::ButtonType(QObject* parent) : MdiWindowType(MediumUpdateWindow,
                                                     "Button",
                                                     "Button", parent,
                                                     QIcon(":/Icons/Button.png"),
-                                                    40, 24, 100, 30)
+                                                    32, 52, 80, 104)
 {
 }
 

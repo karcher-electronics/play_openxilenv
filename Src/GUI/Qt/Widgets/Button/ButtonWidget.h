@@ -22,8 +22,19 @@
 #include "BlackboardObserver.h"
 
 #include <QPushButton>
-#include <QVBoxLayout>
+#include <QLabel>
 #include <QColor>
+
+// A push button that is not only drawn as a circle but also hit-tested as one,
+// so a click in the corner of its bounding square does not trigger it.
+class RoundPushButton : public QPushButton
+{
+public:
+    explicit RoundPushButton(QWidget *parent = nullptr);
+
+protected:
+    virtual bool hitButton(const QPoint &pos) const Q_DECL_OVERRIDE;
+};
 
 class ButtonWidget : public MdiWindowWidget
 {
@@ -44,11 +55,18 @@ public:
     void SetMode(ButtonMode arg_Mode);
     QString GetVariableName() const;
 
+    // Background colour the button shows while the variable is not 0 / is 0.
+    QColor GetColorOn() const;
+    QColor GetColorOff() const;
+    void SetColorOn(QColor arg_Color);
+    void SetColorOff(QColor arg_Color);
+
 protected:
     virtual void dragEnterEvent(QDragEnterEvent *event) Q_DECL_OVERRIDE;
     virtual void dragMoveEvent(QDragMoveEvent *event) Q_DECL_OVERRIDE;
     virtual void dragLeaveEvent(QDragLeaveEvent *event) Q_DECL_OVERRIDE;
     virtual void dropEvent(QDropEvent *event) Q_DECL_OVERRIDE;
+    virtual void resizeEvent(QResizeEvent *event) Q_DECL_OVERRIDE;
     void contextMenuEvent(QContextMenuEvent *event) Q_DECL_OVERRIDE;
 
 private slots:
@@ -70,14 +88,21 @@ private:
     void AttachVariable(const QString &arg_VariableName);
     void DetachVariable();
     void UpdateLabel();
+    void SetOnState(bool arg_On);
+    void ApplyStateColor();
+    // Keeps the button square and centred, so the circle stays a circle.
+    void UpdateButtonGeometry();
 
-    QVBoxLayout *m_Layout;
     QPushButton *m_Button;
+    QLabel *m_Label;
 
     QString m_VariableName;
     int m_Vid;
     ButtonMode m_Mode;
     QColor m_Color;
+    QColor m_ColorOn;
+    QColor m_ColorOff;
+    bool m_IsOn;
 
     BlackboardObserverConnection m_ObserverConnection;
 };

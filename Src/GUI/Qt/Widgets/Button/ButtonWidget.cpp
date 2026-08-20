@@ -27,10 +27,37 @@
 #include <QMenu>
 #include <QAction>
 #include <QContextMenuEvent>
+#include <QResizeEvent>
+#include <QFontMetrics>
 
 extern "C" {
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
+}
+
+// The ini file stores colours as 0x00bbggrr, same as the text window does.
+static unsigned int ButtonColorToIni(const QColor &par_Color)
+{
+    return static_cast<unsigned int>(par_Color.red()) |
+           (static_cast<unsigned int>(par_Color.green()) << 8) |
+           (static_cast<unsigned int>(par_Color.blue()) << 16);
+}
+
+static QColor ButtonIniToColor(int par_Value)
+{
+    return QColor(par_Value & 0x000000FF, (par_Value & 0x0000FF00) >> 8, (par_Value & 0x00FF0000) >> 16);
+}
+
+RoundPushButton::RoundPushButton(QWidget *parent) : QPushButton(parent)
+{
+}
+
+bool RoundPushButton::hitButton(const QPoint &pos) const
+{
+    QRectF Rect(rect());
+    qreal Radius = qMin(Rect.width(), Rect.height()) / 2.0;
+    QPointF Delta = QPointF(pos) - Rect.center();
+    return ((Delta.x() * Delta.x()) + (Delta.y() * Delta.y())) <= (Radius * Radius);
 }
 
 ButtonWidget::ButtonWidget(QString par_WindowTitle, MdiSubWindow* par_SubWindow, MdiWindowType *par_Type, QWidget *parent) :
@@ -38,22 +65,29 @@ ButtonWidget::ButtonWidget(QString par_WindowTitle, MdiSubWindow* par_SubWindow,
     m_Vid(0),
     m_Mode(Taster),
     m_Color(240, 240, 240),
+    m_ColorOn(0, 200, 0),
+    m_ColorOff(240, 240, 240),
+    m_IsOn(false),
     m_ObserverConnection(this)
 {
-    m_Button = new QPushButton(this);
-    m_Layout = new QVBoxLayout(this);
-    m_Layout->setContentsMargins(2, 2, 2, 2);
-    m_Layout->addWidget(m_Button);
-    setLayout(m_Layout);
+    m_Button = new RoundPushButton(this);
+    // Deliberately no layout: button and label are placed by
+    // UpdateButtonGeometry(). A layout would propagate their size as the minimum
+    // size of the whole sub window, and the user could no longer shrink it again.
+    m_Button->setMinimumSize(1, 1);
+
+    m_Label = new QLabel(this);
+    m_Label->setAlignment(Qt::AlignCenter);
 
     connect(m_Button, SIGNAL(toggled(bool)), this, SLOT(ButtonToggled(bool)));
     connect(m_Button, SIGNAL(pressed()), this, SLOT(ButtonPressed()));
     connect(m_Button, SIGNAL(released()), this, SLOT(ButtonReleased()));
 
     setAcceptDrops(true);
-    setMinimumSize(40, 24);
+    setMinimumSize(32, 52);
 
     readFromIni();
+    UpdateButtonGeometry();
 }
 
 ButtonWidget::~ButtonWidget()
@@ -72,6 +106,10 @@ bool ButtonWidget::writeToIni()
     ScQt_IniFileDataBaseWriteString(SectionPath, "type", WindowType, Fd);
     ScQt_IniFileDataBaseWriteString(SectionPath, "variable", m_VariableName, Fd);
     ScQt_IniFileDataBaseWriteString(SectionPath, "mode", ModeString, Fd);
+    QString ColorOnString = QString("0x%1").arg(ButtonColorToIni(m_ColorOn), 0, 16);
+    QString ColorOffString = QString("0x%1").arg(ButtonColorToIni(m_ColorOff), 0, 16);
+    ScQt_IniFileDataBaseWriteString(SectionPath, "ColorOn", ColorOnString, Fd);
+    ScQt_IniFileDataBaseWriteString(SectionPath, "ColorOff", ColorOffString, Fd);
     return true;
 }
 
@@ -85,11 +123,18 @@ bool ButtonWidget::readFromIni()
     m_Mode = (ModeString.compare("schalter", Qt::CaseInsensitive) == 0) ? Schalter : Taster;
     m_Button->setCheckable(m_Mode == Schalter);
 
+    int ColorOn = ScQt_IniFileDataBaseReadInt(SectionPath, "ColorOn", static_cast<int>(ButtonColorToIni(m_ColorOn)), Fd);
+    int ColorOff = ScQt_IniFileDataBaseReadInt(SectionPath, "ColorOff", static_cast<int>(ButtonColorToIni(m_ColorOff)), Fd);
+    m_ColorOn = ButtonIniToColor(ColorOn);
+    m_ColorOff = ButtonIniToColor(ColorOff);
+    m_Color = m_ColorOff;
+
     if (!VariableName.isEmpty()) {
         AttachVariable(VariableName);
     } else {
         UpdateLabel();
     }
+    ApplyStateColor();
     return true;
 }
 
@@ -114,11 +159,42 @@ void ButtonWidget::SetMode(ButtonWidget::ButtonMode arg_Mode)
     m_Button->setChecked(false);
     m_Button->setDown(false);
     m_Button->setCheckable(m_Mode == Schalter);
+    SetOnState(false);
 }
 
 QString ButtonWidget::GetVariableName() const
 {
     return m_VariableName;
+}
+
+QColor ButtonWidget::GetColorOn() const
+{
+    return m_ColorOn;
+}
+
+QColor ButtonWidget::GetColorOff() const
+{
+    return m_ColorOff;
+}
+
+void ButtonWidget::SetColorOn(QColor arg_Color)
+{
+    if (!arg_Color.isValid() || (m_ColorOn == arg_Color)) {
+        return;
+    }
+    m_ColorOn = arg_Color;
+    ApplyStateColor();
+}
+
+void ButtonWidget::SetColorOff(QColor arg_Color)
+{
+    if (!arg_Color.isValid() || (m_ColorOff == arg_Color)) {
+        return;
+    }
+    m_ColorOff = arg_Color;
+    // The generic window colour dialog edits the same colour, keep it in sync.
+    m_Color = arg_Color;
+    ApplyStateColor();
 }
 
 void ButtonWidget::dragEnterEvent(QDragEnterEvent *event)
@@ -151,6 +227,12 @@ void ButtonWidget::dropEvent(QDropEvent *event)
     }
 }
 
+void ButtonWidget::resizeEvent(QResizeEvent *event)
+{
+    MdiWindowWidget::resizeEvent(event);
+    UpdateButtonGeometry();
+}
+
 void ButtonWidget::contextMenuEvent(QContextMenuEvent *event)
 {
     QMenu menu(this);
@@ -181,6 +263,7 @@ void ButtonWidget::CyclicUpdate()
             m_Button->setDown(On);
         }
     }
+    SetOnState(On);
 }
 
 void ButtonWidget::blackboardVariableConfigChanged(int arg_vid, unsigned int arg_observationFlag)
@@ -195,7 +278,12 @@ void ButtonWidget::blackboardVariableConfigChanged(int arg_vid, unsigned int arg
 
 void ButtonWidget::ButtonToggled(bool arg_checked)
 {
-    if ((m_Mode != Schalter) || (m_Vid <= 0)) {
+    if (m_Mode != Schalter) {
+        return;
+    }
+    // Colour follows the click even without a variable, so the state stays visible.
+    SetOnState(arg_checked);
+    if (m_Vid <= 0) {
         return;
     }
     write_bbvari_minmax_check(m_Vid, arg_checked ? 1.0 : 0.0);
@@ -203,7 +291,11 @@ void ButtonWidget::ButtonToggled(bool arg_checked)
 
 void ButtonWidget::ButtonPressed()
 {
-    if ((m_Mode != Taster) || (m_Vid <= 0)) {
+    if (m_Mode != Taster) {
+        return;
+    }
+    SetOnState(true);
+    if (m_Vid <= 0) {
         return;
     }
     write_bbvari_minmax_check(m_Vid, 1.0);
@@ -211,7 +303,11 @@ void ButtonWidget::ButtonPressed()
 
 void ButtonWidget::ButtonReleased()
 {
-    if ((m_Mode != Taster) || (m_Vid <= 0)) {
+    if (m_Mode != Taster) {
+        return;
+    }
+    SetOnState(false);
+    if (m_Vid <= 0) {
         return;
     }
     write_bbvari_minmax_check(m_Vid, 0.0);
@@ -219,16 +315,16 @@ void ButtonWidget::ButtonReleased()
 
 void ButtonWidget::changeColor(QColor arg_color)
 {
-    m_Color = arg_color;
-    QPalette Pal = m_Button->palette();
-    Pal.setColor(QPalette::Button, arg_color);
-    m_Button->setAutoFillBackground(true);
-    m_Button->setPalette(Pal);
+    // The generic window colour dialog sets the off colour of the button.
+    SetColorOff(arg_color);
 }
 
 void ButtonWidget::changeFont(QFont arg_font)
 {
+    // The name is drawn by the label now, so the font has to reach it as well.
     m_Button->setFont(arg_font);
+    m_Label->setFont(arg_font);
+    UpdateButtonGeometry();
 }
 
 void ButtonWidget::changeWindowName(QString arg_name)
@@ -298,5 +394,56 @@ void ButtonWidget::DetachVariable()
 
 void ButtonWidget::UpdateLabel()
 {
-    m_Button->setText(m_VariableName.isEmpty() ? tr("(no variable)") : m_VariableName);
+    // The name sits in the label below, the circle itself stays a plain colour.
+    m_Button->setText(QString());
+    m_Button->setToolTip(m_VariableName);
+    m_Label->setToolTip(m_VariableName);
+    // The elided text depends on the current width, so let the geometry set it.
+    UpdateButtonGeometry();
+}
+
+void ButtonWidget::SetOnState(bool arg_On)
+{
+    if (m_IsOn == arg_On) {
+        return;
+    }
+    m_IsOn = arg_On;
+    ApplyStateColor();
+}
+
+void ButtonWidget::ApplyStateColor()
+{
+    QColor Color = m_IsOn ? m_ColorOn : m_ColorOff;
+    if (!Color.isValid()) {
+        return;
+    }
+    // Most styles ignore QPalette::Button for a push button, so the background
+    // has to be set through the style sheet to become visible at all.
+    QColor TextColor = (Color.lightness() < 128) ? QColor(Qt::white) : QColor(Qt::black);
+    // Half of the (square) side turns the rounded rectangle into a full circle.
+    int Radius = qMin(m_Button->width(), m_Button->height()) / 2;
+    m_Button->setStyleSheet(QString("QPushButton { background-color: %1; color: %2; border: 1px solid %3; border-radius: %4px; padding: 2px; }")
+                            .arg(Color.name(), TextColor.name(), Color.darker(150).name(), QString::number(Radius)));
+}
+
+void ButtonWidget::UpdateButtonGeometry()
+{
+    const int Margin = 2;
+    const int Spacing = 2;
+
+    QString Text = m_VariableName.isEmpty() ? tr("(no variable)") : m_VariableName;
+    QFontMetrics Metrics(m_Label->font());
+    int LabelHeight = Metrics.height();
+    int LabelWidth = qMax(1, width() - (2 * Margin));
+    m_Label->setText(Metrics.elidedText(Text, Qt::ElideRight, LabelWidth));
+    m_Label->setGeometry(Margin, height() - Margin - LabelHeight, LabelWidth, LabelHeight);
+
+    // Whatever is left above the label carries the circle.
+    int Available = height() - (2 * Margin) - LabelHeight - Spacing;
+    int Side = qMin(width() - (2 * Margin), Available);
+    if (Side < 1) {
+        Side = 1;
+    }
+    m_Button->setGeometry((width() - Side) / 2, Margin + ((Available - Side) / 2), Side, Side);
+    ApplyStateColor();
 }
