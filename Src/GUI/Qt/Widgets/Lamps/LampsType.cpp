@@ -18,7 +18,7 @@
 #include "LampsType.h"
 
 LampsType::LampsType(QObject *parent) :
-    MdiWindowType(MediumUpdateWindow, "ControlLamps", "GUI/AllControlLampsViewWindows", "Control Lamps",
+    MdiWindowType(FastUpdateWindow, "ControlLamps", "GUI/AllControlLampsViewWindows", "Control Lamps",
                          "Control lamps view", parent, QIcon(":/Icons/Lamps.png"), 20, 20, 200, 200)
 {
 }

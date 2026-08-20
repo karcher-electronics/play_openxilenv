@@ -32,6 +32,8 @@
 #include "BargraphType.h"
 #include "KnobType.h"
 #include "CanMessageWindowType.h"
+#include "ButtonType.h"
+#include "RotarySwitchType.h"
 #include "WindowNameAlreadyInUse.h"
 #include "GetNewUniqueWindowTitleStartWith.h"
 #include "BarrierHistoryLoggingDialog.h"
@@ -2128,6 +2130,8 @@ void MainWindow::loadAllPlugins()
     AddWindowType(new TachoType());
     AddWindowType(new BargraphType());
     AddWindowType(new KnobType());
+    AddWindowType(new ButtonType());
+    AddWindowType(new RotarySwitchType());
     AddWindowType(new CalibrationTreeType());
     AddWindowType(new UserDrawType());
     AddWindowType(new UserControlType());

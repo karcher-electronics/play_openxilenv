@@ -100,6 +100,9 @@ void CustomLampsGraphicsView::resizeItems(int arg_width, int arg_height)
 
 void CustomLampsGraphicsView::updateForegroundColor(QColor arg_color)
 {
+    if (m_foregroundColor == arg_color) {
+        return;   // nichts zu tun, kein Repaint noetig
+    }
     m_foregroundColor = arg_color;
     update();
 }

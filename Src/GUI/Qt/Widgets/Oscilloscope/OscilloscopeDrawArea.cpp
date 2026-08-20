@@ -1011,6 +1011,43 @@ void OscilloscopeDrawArea::NoZoomSlot (void)
 {
 }
 
+// One wheel notch (120 units) zooms in or out by 20%.
+//   wheel             -> time axis
+//   Ctrl + wheel      -> y axis
+//   Ctrl+Shift+wheel  -> both
+void OscilloscopeDrawArea::wheelEvent (QWheelEvent *event)
+{
+    if (m_Data->xy_view_flag) {   // Zoom is not able inside xy view
+        QWidget::wheelEvent (event);
+        return;
+    }
+    int Delta = event->angleDelta().y();
+    if (Delta == 0) {
+        QWidget::wheelEvent (event);
+        return;
+    }
+
+    int YZoomFlag, TimeZoomFlag;
+    Qt::KeyboardModifiers Modifiers = event->modifiers();
+    if (Modifiers.testFlag (Qt::ControlModifier)) {
+        YZoomFlag = 1;
+        TimeZoomFlag = Modifiers.testFlag (Qt::ShiftModifier) ? 1 : 0;
+    } else {
+        YZoomFlag = 0;
+        TimeZoomFlag = 1;
+    }
+
+    double Factor = pow (1.2, static_cast<double>(Delta) / 120.0);
+    m_OscilloscopeWidget->WheelZoom (YZoomFlag, TimeZoomFlag, Factor,
+                                     width(), height(),
+                                     GetWheelEventXPos (event), GetWheelEventYPos (event));
+    update ();
+    if (YZoomFlag) m_OscilloscopeWidget->UpdateYAxises();
+    if (TimeZoomFlag) m_OscilloscopeWidget->UpdateTimeAxis();
+    m_OscilloscopeWidget->UpdateAllUsedDescs (true);
+    event->accept();
+}
+
 void OscilloscopeDrawArea::dragEnterEvent(QDragEnterEvent *event)
 {
     if (event->mimeData()->hasText()) {

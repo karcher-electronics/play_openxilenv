@@ -1137,6 +1137,76 @@ void OscilloscopeWidget::NewZoom (int par_YZoomFlag, int par_TimeZoomFlag,
     }
 }
 
+#define MAX_WHEEL_Y_ZOOM   1000.0
+
+// Continuous zoom by one mouse wheel step. Unlike NewZoom() this will not push a new entry
+// into the zoom history, it changes the current zoom level (zoom_pos) in place. Therefore
+// "zoom out" and "zoom reset" from the context menu are still working as before.
+// par_Factor > 1.0 -> zoom in, par_Factor < 1.0 -> zoom out
+// par_x/par_y is the mouse position, the value below the mouse pointer will stay fixed.
+void OscilloscopeWidget::WheelZoom (int par_YZoomFlag, int par_TimeZoomFlag, double par_Factor,
+                                    int par_WinWidth, int par_WinHeight,
+                                    int par_x, int par_y)
+{
+    if ((par_Factor <= 0.0) || (par_WinWidth <= 0) || (par_WinHeight <= 0)) return;
+
+    if (par_YZoomFlag) {
+        double OldZoom = m_Data->y_zoom[m_Data->zoom_pos];
+        if (OldZoom <= 0.0) OldZoom = 1.0;   // not zoomed till now
+        double NewZoomValue = OldZoom * par_Factor;
+        // 1.0 is the complete value range (same as "zoom reset"), do not zoom out further
+        if (NewZoomValue < 1.0) NewZoomValue = 1.0;
+        if (NewZoomValue > MAX_WHEEL_Y_ZOOM) NewZoomValue = MAX_WHEEL_Y_ZOOM;
+
+        // The draw area maps a normalized value v to the screen with
+        //     y = height - (v - y_off) * y_zoom * height
+        // Solve this for y_off so that the value below the mouse pointer will not move.
+        double Rel = static_cast<double>(par_WinHeight - par_y) / static_cast<double>(par_WinHeight);
+        double NewOff = m_Data->y_off[m_Data->zoom_pos] + Rel * (1.0 / OldZoom - 1.0 / NewZoomValue);
+        // Keep the visible band [y_off ... y_off + 1/y_zoom] inside the value range
+        double MaxOff = 1.0 - 1.0 / NewZoomValue;
+        if (NewOff > MaxOff) NewOff = MaxOff;
+        if (NewOff < 0.0) NewOff = 0.0;
+
+        m_Data->y_zoom[m_Data->zoom_pos] = NewZoomValue;
+        m_Data->y_off[m_Data->zoom_pos] = NewOff;
+    }
+
+    if (par_TimeZoomFlag) {
+        double OldWidth = static_cast<double>(m_Data->t_window_end - m_Data->t_window_start);
+        double NewWidth = OldWidth / par_Factor;
+        double MinWidth = static_cast<double>(m_Data->t_step);
+        // Do not zoom out further than the configured window size (same as "zoom reset")
+        double MaxWidth = m_Data->t_window_size_configered * static_cast<double>(TIMERCLKFRQ);
+        if (MaxWidth < MinWidth) MaxWidth = MinWidth;
+        if (NewWidth < MinWidth) NewWidth = MinWidth;
+        if (NewWidth > MaxWidth) NewWidth = MaxWidth;
+
+        uint64_t NewStart, NewEnd;
+        if (m_Data->state) {
+            // Online: the right border is pinned to the current simulation time, only the width changes
+            NewEnd = m_Data->t_window_end;
+            if (static_cast<double>(NewEnd) > NewWidth) {
+                NewStart = NewEnd - static_cast<uint64_t>(NewWidth);
+            } else {
+                NewStart = 0;
+                NewEnd = static_cast<uint64_t>(NewWidth);
+            }
+        } else {
+            double Rel = static_cast<double>(par_x) / static_cast<double>(par_WinWidth);
+            double Anchor = static_cast<double>(m_Data->t_window_start) + Rel * OldWidth;
+            double Start = Anchor - Rel * NewWidth;
+            if (Start < 0.0) Start = 0.0;
+            NewStart = static_cast<uint64_t>(Start);
+            NewEnd = NewStart + static_cast<uint64_t>(NewWidth);
+        }
+        set_t_window_start_end (NewStart, NewEnd);
+        // Keep the current zoom history entry consistent with the new window
+        m_Data->t_window_base[m_Data->zoom_pos] = m_Data->t_window_start;
+        m_Data->t_window_width[m_Data->zoom_pos] = m_Data->t_window_end - m_Data->t_window_start;
+    }
+}
+
 void OscilloscopeWidget::ConfigDialog (void)
 {
     OscilloscopeConfigDialog Dlg (m_Data, GetWindowTitle());

@@ -20,6 +20,7 @@
 #include <QPoint>
 #include <QMouseEvent>
 #include <QDropEvent>
+#include <QWheelEvent>
 
 // this file is only necessary to switch between Qt 5.x to 6.x
 
@@ -50,6 +51,24 @@ static QPoint GetEventGlobalPos(QMouseEvent *par_Event)
     return Point;
 #else
     return par_Event->globalPos();
+#endif
+}
+
+static inline int GetWheelEventXPos(QWheelEvent *par_Event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    return (int)par_Event->position().x();
+#else
+    return (int)par_Event->pos().x();
+#endif
+}
+
+static inline int GetWheelEventYPos(QWheelEvent *par_Event)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    return (int)par_Event->position().y();
+#else
+    return (int)par_Event->pos().y();
 #endif
 }
 

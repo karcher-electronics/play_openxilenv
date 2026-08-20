@@ -29,6 +29,8 @@ target_sources(XilEnvGui PRIVATE
 add_subdirectory(A2LCalMap)
 add_subdirectory(A2LCalSingle)
 add_subdirectory(Bargraph)
+add_subdirectory(Button)
+add_subdirectory(RotarySwitch)
 add_subdirectory(Tacho)
 add_subdirectory(Text)
 add_subdirectory(Knob)

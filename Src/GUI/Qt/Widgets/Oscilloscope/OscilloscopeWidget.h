@@ -74,6 +74,7 @@ public:
     void ZoomReset (void);
     void ZoomIndex (int par_Index);
     void NewZoom (int par_YZoomFlag, int par_TimeZoomFlag, int par_WinWidth, int par_WinHeight, int par_x1, int par_y1, int par_x2, int par_y2);
+    void WheelZoom (int par_YZoomFlag, int par_TimeZoomFlag, double par_Factor, int par_WinWidth, int par_WinHeight, int par_x, int par_y);
     void ConfigDialog (void);
 
     void ResizeDescFrames (void);

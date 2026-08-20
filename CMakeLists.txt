@@ -94,6 +94,7 @@ else()
             Src/GUI/Qt/Widgets/A2LCalMap
             Src/GUI/Qt/Widgets/A2LCalSingle
             Src/GUI/Qt/Widgets/Bargraph
+            Src/GUI/Qt/Widgets/Button
             Src/GUI/Qt/Widgets/CalibrationMap
             Src/GUI/Qt/Widgets/CalibrationTree
             Src/GUI/Qt/Widgets/CanMessage
@@ -102,6 +103,7 @@ else()
             Src/GUI/Qt/Widgets/Knob
             Src/GUI/Qt/Widgets/Lamps
             Src/GUI/Qt/Widgets/Oscilloscope
+            Src/GUI/Qt/Widgets/RotarySwitch
             Src/GUI/Qt/Widgets/Slider
             Src/GUI/Qt/Widgets/Tacho
             Src/GUI/Qt/Widgets/Text
