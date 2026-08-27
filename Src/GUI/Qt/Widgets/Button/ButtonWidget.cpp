@@ -93,7 +93,7 @@ ButtonWidget::ButtonWidget(QString par_WindowTitle, MdiSubWindow* par_SubWindow,
 ButtonWidget::~ButtonWidget()
 {
     writeToIni();
-    DetachVariable();
+    DetachFromBlackboard();
 }
 
 bool ButtonWidget::writeToIni()
@@ -130,7 +130,7 @@ bool ButtonWidget::readFromIni()
     m_Color = m_ColorOff;
 
     if (!VariableName.isEmpty()) {
-        AttachVariable(VariableName);
+        SetVariable(VariableName);
     } else {
         UpdateLabel();
     }
@@ -221,7 +221,7 @@ void ButtonWidget::dropEvent(QDropEvent *event)
     if (event->mimeData()->hasText()) {
         DragAndDropInfos Infos(event->mimeData()->text());
         event->acceptProposedAction();
-        AttachVariable(Infos.GetName());
+        SetVariable(Infos.GetName());
     } else {
         event->ignore();
     }
@@ -249,7 +249,12 @@ void ButtonWidget::ConfigureSlot()
 void ButtonWidget::CyclicUpdate()
 {
     if (m_Vid <= 0) {
-        return;
+        // The variable may have vanished from the blackboard in the meantime
+        // (process was stopped), attach again as soon as it is back.
+        AttachToBlackboard();
+        if (m_Vid <= 0) {
+            return;
+        }
     }
     bool On = (read_bbvari_convert_double(m_Vid) != 0.0);
     if (m_Mode == Schalter) {
@@ -272,7 +277,7 @@ void ButtonWidget::blackboardVariableConfigChanged(int arg_vid, unsigned int arg
         return;
     }
     if ((arg_observationFlag & OBSERVE_REMOVE_VARIABLE) != 0) {
-        DetachVariable();
+        DetachFromBlackboard();  // keep the configured name, CyclicUpdate() attaches again
     }
 }
 
@@ -335,9 +340,9 @@ void ButtonWidget::changeWindowName(QString arg_name)
 void ButtonWidget::changeVariable(QString arg_variable, bool arg_visible)
 {
     if (arg_visible) {
-        AttachVariable(arg_variable);
+        SetVariable(arg_variable);
     } else if (arg_variable.compare(m_VariableName) == 0) {
-        DetachVariable();
+        ClearVariable();
     }
 }
 
@@ -345,16 +350,16 @@ void ButtonWidget::changeVaraibles(QStringList arg_variables, bool arg_visible)
 {
     Q_UNUSED(arg_visible)
     if (!arg_variables.isEmpty()) {
-        AttachVariable(arg_variables.first());
+        SetVariable(arg_variables.first());
     }
 }
 
 void ButtonWidget::resetDefaultVariables(QStringList arg_variables)
 {
     if (!arg_variables.isEmpty()) {
-        AttachVariable(arg_variables.first());
+        SetVariable(arg_variables.first());
     } else {
-        DetachVariable();
+        ClearVariable();
     }
 }
 
@@ -367,29 +372,43 @@ void ButtonWidget::openDialog()
     emit openStandardDialog(List, true, false, m_Color);
 }
 
-void ButtonWidget::AttachVariable(const QString &arg_VariableName)
+void ButtonWidget::SetVariable(const QString &arg_VariableName)
 {
-    DetachVariable();
-    if (!arg_VariableName.isEmpty()) {
-        int Vid = add_bbvari(QStringToConstChar(arg_VariableName), BB_UNKNOWN_WAIT, nullptr);
-        if (Vid > 0) {
-            m_Vid = Vid;
-            m_VariableName = arg_VariableName;
-            m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
-        }
-    }
+    DetachFromBlackboard();
+    // The name is stored even if the variable is currently not inside the
+    // blackboard, otherwise the configuration would be lost with the next
+    // writeToIni() and the user had to select the variable again.
+    m_VariableName = arg_VariableName;
+    AttachToBlackboard();
     UpdateLabel();
 }
 
-void ButtonWidget::DetachVariable()
+void ButtonWidget::ClearVariable()
+{
+    DetachFromBlackboard();
+    m_VariableName.clear();
+    UpdateLabel();
+}
+
+void ButtonWidget::AttachToBlackboard()
+{
+    if ((m_Vid > 0) || m_VariableName.isEmpty()) {
+        return;
+    }
+    int Vid = add_bbvari(QStringToConstChar(m_VariableName), BB_UNKNOWN_WAIT, nullptr);
+    if (Vid > 0) {
+        m_Vid = Vid;
+        m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
+    }
+}
+
+void ButtonWidget::DetachFromBlackboard()
 {
     if (m_Vid > 0) {
         m_ObserverConnection.RemoveObserveVariable(m_Vid);
         remove_bbvari_unknown_wait(m_Vid);
         m_Vid = 0;
     }
-    m_VariableName.clear();
-    UpdateLabel();
 }
 
 void ButtonWidget::UpdateLabel()

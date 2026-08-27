@@ -75,7 +75,7 @@ RotarySwitchWidget::RotarySwitchWidget(QString par_WindowTitle, MdiSubWindow* pa
 RotarySwitchWidget::~RotarySwitchWidget()
 {
     writeToIni();
-    DetachVariable();
+    DetachFromBlackboard();
 }
 
 bool RotarySwitchWidget::writeToIni()
@@ -131,7 +131,7 @@ bool RotarySwitchWidget::readFromIni()
 
     m_Value = m_Min;
     if (!VariableName.isEmpty()) {
-        AttachVariable(VariableName);
+        SetVariable(VariableName);
     }
     update();
     return true;
@@ -622,7 +622,7 @@ void RotarySwitchWidget::dropEvent(QDropEvent *event)
     if (event->mimeData()->hasText()) {
         DragAndDropInfos Infos(event->mimeData()->text());
         event->acceptProposedAction();
-        AttachVariable(Infos.GetName());
+        SetVariable(Infos.GetName());
     } else {
         event->ignore();
     }
@@ -643,6 +643,11 @@ void RotarySwitchWidget::ConfigureSlot()
 
 void RotarySwitchWidget::CyclicUpdate()
 {
+    if (m_Vid <= 0) {
+        // The variable may have vanished from the blackboard in the meantime
+        // (process was stopped), attach again as soon as it is back.
+        AttachToBlackboard();
+    }
     if ((m_Vid <= 0) || m_Dragging) {
         return;
     }
@@ -659,7 +664,7 @@ void RotarySwitchWidget::blackboardVariableConfigChanged(int arg_vid, unsigned i
         return;
     }
     if ((arg_observationFlag & OBSERVE_REMOVE_VARIABLE) != 0) {
-        DetachVariable();
+        DetachFromBlackboard();  // keep the configured name, CyclicUpdate() attaches again
     }
 }
 
@@ -684,9 +689,9 @@ void RotarySwitchWidget::changeWindowName(QString arg_name)
 void RotarySwitchWidget::changeVariable(QString arg_variable, bool arg_visible)
 {
     if (arg_visible) {
-        AttachVariable(arg_variable);
+        SetVariable(arg_variable);
     } else if (arg_variable.compare(m_VariableName) == 0) {
-        DetachVariable();
+        ClearVariable();
     }
 }
 
@@ -694,16 +699,16 @@ void RotarySwitchWidget::changeVaraibles(QStringList arg_variables, bool arg_vis
 {
     Q_UNUSED(arg_visible)
     if (!arg_variables.isEmpty()) {
-        AttachVariable(arg_variables.first());
+        SetVariable(arg_variables.first());
     }
 }
 
 void RotarySwitchWidget::resetDefaultVariables(QStringList arg_variables)
 {
     if (!arg_variables.isEmpty()) {
-        AttachVariable(arg_variables.first());
+        SetVariable(arg_variables.first());
     } else {
-        DetachVariable();
+        ClearVariable();
     }
 }
 
@@ -716,28 +721,42 @@ void RotarySwitchWidget::openDialog()
     emit openStandardDialog(List, true, false, m_Color, m_Font);
 }
 
-void RotarySwitchWidget::AttachVariable(const QString &arg_VariableName)
+void RotarySwitchWidget::SetVariable(const QString &arg_VariableName)
 {
-    DetachVariable();
-    if (!arg_VariableName.isEmpty()) {
-        int Vid = add_bbvari(QStringToConstChar(arg_VariableName), BB_UNKNOWN_WAIT, nullptr);
-        if (Vid > 0) {
-            m_Vid = Vid;
-            m_VariableName = arg_VariableName;
-            m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
-            m_Value = read_bbvari_convert_double(m_Vid);
-        }
-    }
+    DetachFromBlackboard();
+    // The name is stored even if the variable is currently not inside the
+    // blackboard, otherwise the configuration would be lost with the next
+    // writeToIni() and the user had to select the variable again.
+    m_VariableName = arg_VariableName;
+    AttachToBlackboard();
     update();
 }
 
-void RotarySwitchWidget::DetachVariable()
+void RotarySwitchWidget::ClearVariable()
+{
+    DetachFromBlackboard();
+    m_VariableName.clear();
+    update();
+}
+
+void RotarySwitchWidget::AttachToBlackboard()
+{
+    if ((m_Vid > 0) || m_VariableName.isEmpty()) {
+        return;
+    }
+    int Vid = add_bbvari(QStringToConstChar(m_VariableName), BB_UNKNOWN_WAIT, nullptr);
+    if (Vid > 0) {
+        m_Vid = Vid;
+        m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
+        m_Value = read_bbvari_convert_double(m_Vid);
+    }
+}
+
+void RotarySwitchWidget::DetachFromBlackboard()
 {
     if (m_Vid > 0) {
         m_ObserverConnection.RemoveObserveVariable(m_Vid);
         remove_bbvari_unknown_wait(m_Vid);
         m_Vid = 0;
     }
-    m_VariableName.clear();
-    update();
 }

@@ -85,8 +85,12 @@ private slots:
 
 private:
     void openDialog() Q_DECL_OVERRIDE;
-    void AttachVariable(const QString &arg_VariableName);
-    void DetachVariable();
+    // The variable name is configuration and is kept independent of the
+    // blackboard, so it survives a variable that is (temporarily) not there.
+    void SetVariable(const QString &arg_VariableName);
+    void ClearVariable();
+    void AttachToBlackboard();
+    void DetachFromBlackboard();
     void UpdateLabel();
     void SetOnState(bool arg_On);
     void ApplyStateColor();
